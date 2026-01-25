@@ -1,0 +1,30 @@
+{
+  "llm": {
+    "enabled": true,
+    "provider": "ollama",
+    "base_url": "http://localhost:11434",
+    "model": "gemma2:2b",
+    "temperature": 0.4,
+    "max_tokens": 512,
+    "allow_tools": true
+  },
+  "voice": {
+    "vosk_model_path": "..\\vosk-model-small-ru-0.22\\vosk-model-small-ru-0.22",
+    "input_device": null,
+    "ptt_seconds": 4.0,
+    "hotword_enabled": true,
+    "hotword": "кряква",
+    "hotword_command_seconds": 5.0,
+    "samplerate": 16000
+  },
+  "ui": {
+    "always_on_top": true,
+    "start_x": 824,
+    "start_y": 610,
+    "scale": 1.0,
+    "show_bubbles": true,
+    "listen_indicator": true,
+    "beeps": true,
+    "auto_degreen": true
+  }
+}
