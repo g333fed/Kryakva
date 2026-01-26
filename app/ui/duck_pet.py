@@ -1,4 +1,3 @@
-\
 from __future__ import annotations
 import os, shutil, threading
 import tkinter as tk
@@ -281,6 +280,9 @@ class DuckDesktopWidget:
             return
         model = self._vosk_path()
         if not model:
+            if self._hotword:
+                self._hotword.stop()
+                self._hotword = None
             return
         if self._hotword and not force:
             return
