@@ -1,10 +1,17 @@
-
 from __future__ import annotations
+
+import logging
+from typing import Any
+
 import requests
-from typing import List, Dict, Any
+
+logger = logging.getLogger(__name__)
+
 
 class OllamaProvider:
-    def __init__(self, base_url: str, model: str, temperature: float = 0.6, max_tokens: int = 512):
+    """Thin Ollama Chat API client."""
+
+    def __init__(self, base_url: str, model: str, temperature: float = 0.6, max_tokens: int = 512) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.temperature = temperature
@@ -12,30 +19,28 @@ class OllamaProvider:
 
     def ping(self, timeout: int = 3) -> bool:
         try:
-            r = requests.get(f"{self.base_url}/api/tags", timeout=timeout)
-            return r.status_code == 200
+            response = requests.get(f"{self.base_url}/api/tags", timeout=timeout)
+            logger.info("Ollama ping status=%s", response.status_code)
+            return response.status_code == 200
         except Exception:
+            logger.exception("Ollama ping failed")
             return False
 
     def list_models(self, timeout: int = 5) -> list[str]:
-        r = requests.get(f"{self.base_url}/api/tags", timeout=timeout)
-        r.raise_for_status()
-        data = r.json() or {}
-        models = []
-        for m in data.get("models", []) or []:
-            name = m.get("name")
-            if name:
-                models.append(name)
-        return models
+        response = requests.get(f"{self.base_url}/api/tags", timeout=timeout)
+        response.raise_for_status()
+        data = response.json() or {}
+        return [m.get("name") for m in (data.get("models") or []) if m.get("name")]
 
-    def chat(self, messages: List[Dict[str, str]], timeout: int = 120) -> str:
-        payload: Dict[str, Any] = {
+    def chat(self, messages: list[dict[str, str]], timeout: int = 120) -> str:
+        payload: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "stream": False,
-            "options": {"temperature": self.temperature, "num_predict": self.max_tokens}
+            "options": {"temperature": self.temperature, "num_predict": self.max_tokens},
         }
-        r = requests.post(f"{self.base_url}/api/chat", json=payload, timeout=timeout)
-        r.raise_for_status()
-        data = r.json()
-        return (data.get("message", {}) or {}).get("content", "")
+        logger.info("LLM request model=%s", self.model)
+        response = requests.post(f"{self.base_url}/api/chat", json=payload, timeout=timeout)
+        response.raise_for_status()
+        data = response.json()
+        return (data.get("message") or {}).get("content", "")
