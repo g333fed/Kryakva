@@ -116,6 +116,17 @@ python build_exe.py
 
 Output executable: `dist/kryakva.exe`.
 
+## Source Protection
+
+Kryakva includes a source provenance guard that allows runtime only when the repository origin is GitHub.
+
+- Intended behavior: discourage repackaging from non-GitHub sources.
+- Temporary local bypass (for trusted dev/testing only):
+
+```bash
+set KRYAKVA_ALLOW_UNVERIFIED_SOURCE=1
+```
+
 ## Contributing
 
 Contributions are welcome.
@@ -133,4 +144,6 @@ Please also review:
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Kryakva Non-Commercial Open License (KNCOL) v1.0.
+
+The license allows use, modification, and redistribution for non-commercial purposes only. See [LICENSE](LICENSE).
