@@ -12,6 +12,7 @@ LOW_RISK = {
     "show_desktop","open_explorer","open_downloads","open_documents","open_taskmgr",
     "open_settings","open_security","open_notepad","open_calc","open_cmd","open_powershell",
     "open_control_panel","open_device_manager","open_services","open_recycle_bin",
+    "open_run_dialog","open_clipboard_history","take_screenshot",
     "volume_up","volume_down","volume_mute","snap_left","snap_right",
     "minimize_window","maximize_window","web_search","open_url"
 }
