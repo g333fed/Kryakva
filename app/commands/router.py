@@ -1,8 +1,10 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Optional, Literal
 
-Intent = Literal["cmd","llm"]
+from dataclasses import dataclass
+from typing import Literal, Optional
+
+Intent = Literal["cmd", "llm"]
+
 
 @dataclass
 class RouteResult:
@@ -10,87 +12,84 @@ class RouteResult:
     command: Optional[str] = None
     argument: Optional[str] = None
 
+
+@dataclass(frozen=True)
+class CommandPattern:
+    keywords: tuple[str, ...]
+    command: str
+    mode: Literal["any", "all"] = "any"
+
+    def matches(self, text: str) -> bool:
+        if self.mode == "all":
+            return all(keyword in text for keyword in self.keywords)
+        return any(keyword in text for keyword in self.keywords)
+
+
+COMMAND_PATTERNS: list[CommandPattern] = [
+    CommandPattern(("проводник", "explorer"), "open_explorer"),
+    CommandPattern(("загрузк",), "open_downloads"),
+    CommandPattern(("документ",), "open_documents"),
+    CommandPattern(("диспетчер задач",), "open_taskmgr"),
+    CommandPattern(("настройк",), "open_settings"),
+    CommandPattern(("безопасн", "защит"), "open_security"),
+    CommandPattern(("панель управления",), "open_control_panel"),
+    CommandPattern(("диспетчер устройств",), "open_device_manager"),
+    CommandPattern(("служб",), "open_services"),
+    CommandPattern(("блокнот",), "open_notepad"),
+    CommandPattern(("калькулятор",), "open_calc"),
+    CommandPattern(("cmd", "командн"), "open_cmd"),
+    CommandPattern(("powershell", "пауэр"), "open_powershell"),
+    CommandPattern(("громче",), "volume_up"),
+    CommandPattern(("тише",), "volume_down"),
+    CommandPattern(("без звука", "mute"), "volume_mute"),
+    CommandPattern(("заблок", "lock"), "lock_pc"),
+    CommandPattern(("спящий", "усни", "sleep"), "sleep_pc"),
+]
+
+
 class CommandRouter:
     def route(self, text: str) -> RouteResult:
-        t = (text or "").lower().strip()
-        if not t:
+        normalized = (text or "").lower().strip()
+        if not normalized:
             return RouteResult("llm", argument="")
 
-        # allow phrase like: "кряква, ..."
-        if t.startswith("кряква"):
-            t = t.replace("кряква", "", 1).strip(" ,.!")
+        if normalized.startswith("кряква"):
+            normalized = normalized.replace("кряква", "", 1).strip(" ,.!")
 
-        # desktop / window mgmt
-        if ("прибери" in t or "убери" in t) and ("рабоч" in t and "стол" in t):
-            return RouteResult("cmd","show_desktop")
-        if ("показ" in t or "открой" in t) and ("рабоч" in t and "стол" in t):
-            return RouteResult("cmd","show_desktop")
-        if ("закрой" in t and "все" in t and "окна" in t):
-            return RouteResult("cmd","show_desktop")
-        if ("закрой" in t and "окно" in t) or t == "закрой окно":
-            return RouteResult("cmd","close_active_window")
-        if ("сверни" in t and "окно" in t):
-            return RouteResult("cmd","minimize_window")
-        if ("разверни" in t and "окно" in t):
-            return RouteResult("cmd","maximize_window")
-        if ("прижм" in t or "прикреп" in t) and ("влево" in t or "слева" in t):
-            return RouteResult("cmd","snap_left")
-        if ("прижм" in t or "прикреп" in t) and ("вправо" in t or "справа" in t):
-            return RouteResult("cmd","snap_right")
+        desktop_patterns = [
+            CommandPattern(("рабоч", "стол"), "show_desktop", mode="all"),
+            CommandPattern(("закрой", "все", "окна"), "show_desktop", mode="all"),
+        ]
+        if any(pattern.matches(normalized) for pattern in desktop_patterns):
+            return RouteResult("cmd", "show_desktop")
 
-        # open apps
-        if "проводник" in t or "explorer" in t:
-            return RouteResult("cmd","open_explorer")
-        if "загрузк" in t:
-            return RouteResult("cmd","open_downloads")
-        if "документ" in t:
-            return RouteResult("cmd","open_documents")
-        if "диспетчер задач" in t or ("диспетчер" in t and "задач" in t):
-            return RouteResult("cmd","open_taskmgr")
-        if "настройк" in t:
-            return RouteResult("cmd","open_settings")
-        if "безопасн" in t or "защит" in t:
-            return RouteResult("cmd","open_security")
-        if "панель управления" in t:
-            return RouteResult("cmd","open_control_panel")
-        if "диспетчер устройств" in t:
-            return RouteResult("cmd","open_device_manager")
-        if "служб" in t:
-            return RouteResult("cmd","open_services")
-        if "блокнот" in t:
-            return RouteResult("cmd","open_notepad")
-        if "калькулятор" in t:
-            return RouteResult("cmd","open_calc")
-        if t == "cmd" or "командн" in t:
-            return RouteResult("cmd","open_cmd")
-        if "powershell" in t or "пауэр" in t:
-            return RouteResult("cmd","open_powershell")
+        window_patterns = [
+            (CommandPattern(("закрой", "окно"), "close_active_window", mode="all")),
+            (CommandPattern(("сверни", "окно"), "minimize_window", mode="all")),
+            (CommandPattern(("разверни", "окно"), "maximize_window", mode="all")),
+            (CommandPattern(("прижм", "влево"), "snap_left", mode="all")),
+            (CommandPattern(("прижм", "вправо"), "snap_right", mode="all")),
+        ]
+        for pattern in window_patterns:
+            if pattern.matches(normalized):
+                return RouteResult("cmd", pattern.command)
 
-        # system quick
-        if ("очист" in t or "пуст" in t) and "корзин" in t:
-            return RouteResult("cmd","empty_recycle_bin")
-        if ("открой" in t or "покажи" in t) and "корзин" in t:
-            return RouteResult("cmd","open_recycle_bin")
-        if "заблок" in t or "lock" in t:
-            return RouteResult("cmd","lock_pc")
-        if "спящий" in t or "усни" in t or "sleep" in t:
-            return RouteResult("cmd","sleep_pc")
+        if ("очист" in normalized or "пуст" in normalized) and "корзин" in normalized:
+            return RouteResult("cmd", "empty_recycle_bin")
+        if ("открой" in normalized or "покажи" in normalized) and "корзин" in normalized:
+            return RouteResult("cmd", "open_recycle_bin")
 
-        # sound
-        if "громче" in t:
-            return RouteResult("cmd","volume_up")
-        if "тише" in t:
-            return RouteResult("cmd","volume_down")
-        if "без звука" in t or "mute" in t:
-            return RouteResult("cmd","volume_mute")
+        for pattern in COMMAND_PATTERNS:
+            if pattern.matches(normalized):
+                return RouteResult("cmd", pattern.command)
 
-        # web
-        if t.startswith("поищи "):
-            return RouteResult("cmd","web_search", t.replace("поищи","",1).strip())
-        if t.startswith("открой "):
-            arg = t.replace("открой","",1).strip()
-            if arg and not arg.startswith("http"):
-                arg = "https://" + arg
-            return RouteResult("cmd","open_url", arg)
+        if normalized.startswith("поищи "):
+            return RouteResult("cmd", "web_search", normalized.replace("поищи", "", 1).strip())
+
+        if normalized.startswith("открой "):
+            argument = normalized.replace("открой", "", 1).strip()
+            if argument and not argument.startswith("http"):
+                argument = f"https://{argument}"
+            return RouteResult("cmd", "open_url", argument)
 
         return RouteResult("llm", argument=text)
